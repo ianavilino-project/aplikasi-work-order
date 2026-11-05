@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistem Work Order Internal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-4 md:p-8">
+  <script>
+    const API_URL = https://script.google.com/macros/s/AKfycbz532i3q45ae-ifcA_Ricvrtpw-nnlz1dIJ_c78iXw_AIKXqy4KuwGETcL7rOWH5QPznQ/exec;
+  </script>
+
+  <div class="max-w-5xl mx-auto space-y-8">
+    <h1 class="text-3xl font-bold text-center text-gray-800">Sistem Work Order Internal</h1>
+
+    <!-- Form Input Work Order -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+      <h2 class="text-xl font-semibold mb-4 text-gray-700">Buat Work Order Baru</h2>
+      <form id="woForm" onsubmit="submitWO(event)" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Nama Pelapor</label>
+            <input type="text" id="pelapor" required class="w-full mt-1 p-2 border rounded-md">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Lokasi / Ruangan</label>
+            <input type="text" id="lokasi" required class="w-full mt-1 p-2 border rounded-md">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Deskripsi Masalah / Pekerjaan</label>
+          <textarea id="deskripsi" required class="w-full mt-1 p-2 border rounded-md" rows="3"></textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Tingkat Prioritas</label>
+          <select id="prioritas" class="w-full mt-1 p-2 border rounded-md">
+            <option value="Rendah">Rendah</option>
+            <option value="Sedang">Sedang</option>
+            <option value="Tinggi">Tinggi</option>
+          </select>
+        </div>
+        <button type="submit" id="btnSubmit" class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700">Kirim Work Order</button>
+      </form>
+    </div>
+
+    <!-- Dashboard Status Admin -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-gray-700">Daftar Work Order</h2>
+        <button onclick="loadData()" class="bg-gray-200 text-gray-700 px-3 py-1 rounded hover:bg-gray-300">Refresh Data</button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-gray-50 border-b">
+              <th class="p-3 text-sm font-semibold">ID</th>
+              <th class="p-3 text-sm font-semibold">Tanggal</th>
+              <th class="p-3 text-sm font-semibold">Pelapor</th>
+              <th class="p-3 text-sm font-semibold">Lokasi</th>
+              <th class="p-3 text-sm font-semibold">Deskripsi</th>
+              <th class="p-3 text-sm font-semibold">Prioritas</th>
+              <th class="p-3 text-sm font-semibold">Status</th>
+              <th class="p-3 text-sm font-semibold">Aksi Admin</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="8" class="text-center p-4">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function loadData() {
+      const tbody = document.getElementById("tableBody");
+      tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4">Memuat data...</td></tr>';
+      try {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+        
+        tbody.innerHTML = "";
+        data.reverse().forEach(row => {
+          tbody.innerHTML += `
+            <tr class="border-b hover:bg-gray-50">
+              <td class="p-3 text-sm font-mono">${row.id}</td>
+              <td class="p-3 text-sm">${row.tanggal}</td>
+              <td class="p-3 text-sm">${row.pelapor}</td>
+              <td class="p-3 text-sm">${row.lokasi}</td>
+              <td class="p-3 text-sm">${row.deskripsi}</td>
+              <td class="p-3 text-sm font-semibold">${row.prioritas}</td>
+              <td class="p-3 text-sm"><span class="px-2 py-1 rounded text-xs text-white ${getStatusBadge(row.status)}">${row.status}</span></td>
+              <td class="p-3 text-sm space-x-1">
+                <button onclick="updateStatus('${row.id}', 'In Progress')" class="bg-yellow-500 text-white px-2 py-1 rounded text-xs hover:bg-yellow-600">Proses</button>
+                <button onclick="updateStatus('${row.id}', 'Completed')" class="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700">Selesai</button>
+              </td>
+            </tr>
+          `;
+        });
+      } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-red-500">Gagal memuat data. Periksa koneksi/URL API.</td></tr>';
+      }
+    }
+
+    function getStatusBadge(status) {
+      if (status === "Pending") return "bg-gray-500";
+      if (status === "In Progress") return "bg-yellow-500";
+      if (status === "Completed") return "bg-green-600";
+      return "bg-gray-400";
+    }
+
+    async function submitWO(e) {
+      e.preventDefault();
+      const btn = document.getElementById("btnSubmit");
+      btn.innerText = "Mengirim...";
+      btn.disabled = true;
+
+      const payload = {
+        action: "create",
+        pelapor: document.getElementById("pelapor").value,
+        lokasi: document.getElementById("lokasi").value,
+        deskripsi: document.getElementById("deskripsi").value,
+        prioritas: document.getElementById("prioritas").value
+      };
+
+      await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+
+      document.getElementById("woForm").reset();
+      btn.innerText = "Kirim Work Order";
+      btn.disabled = false;
+      loadData();
+    }
+
+    async function updateStatus(id, newStatus) {
+      await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "updateStatus", id: id, status: newStatus })
+      });
+      loadData();
+    }
+
+    // Muat data saat halaman pertama kali dibuka
+    loadData();
+  </script>
+</body>
+</html>
